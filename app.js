@@ -15,11 +15,29 @@ function showPage() {
     else link.removeAttribute('aria-current');
   });
 }
+function displayName(name) {
+  return name === '球球' ? '姐姐' : name;
+}
 function render(data) {
   login.hidden = true;
   handbook.hidden = false;
-  document.querySelector('#visitor').textContent = data.name;
+  document.querySelector('#visitor').textContent = displayName(data.name);
   pages.innerHTML = data.html;
+  for (const sectionId of ['east', 'west', 'city']) {
+    const section = pages.querySelector('#' + sectionId);
+    const heading = section.querySelector('h1');
+    heading.textContent = heading.textContent.split(' · ')[0];
+    const placeholder = document.createElement('p');
+    placeholder.textContent = '待定';
+    section.replaceChildren(heading, placeholder);
+  }
+  for (const heading of pages.querySelectorAll('#arrival h2, #return h2')) {
+    heading.textContent = heading.textContent.replace('（球球）', '（姐姐）');
+  }
+  const sortedItems = data.items.filter(item => !item.deleted_at).sort((first, second) =>
+    Number(first.done) - Number(second.done) ||
+    Date.parse(second.created_at) - Date.parse(first.created_at)
+  );
   pages.querySelectorAll('#shopping > h2').forEach(heading => heading.remove());
   pages.querySelector('nav a[href="#shopping"]').textContent = '购物清单';
   const packing = pages.querySelector('#before h2:nth-of-type(2)');
@@ -49,7 +67,7 @@ function render(data) {
       if (value) request('add', {personal, item_title: (isTodo ? prefix : '') + value});
     };
     if (!isShopping) list.append(form);
-    for (const item of data.items.filter(item => !item.deleted_at && Boolean(item.owner) === personal &&
+    for (const item of sortedItems.filter(item => Boolean(item.owner) === personal &&
       (!personal || item.title.startsWith(prefix) === isTodo))) {
       const itemTitle = isTodo ? item.title.slice(prefix.length) : item.title;
       const row = document.createElement('article');
@@ -57,7 +75,7 @@ function render(data) {
       title.className = 'toggle';
       title.textContent = (item.done ? '✓  ' : '□  ') + itemTitle;
       const author = document.createElement('small');
-      author.textContent = item.author;
+      author.textContent = displayName(item.author);
       row.append(title, author);
       title.setAttribute('aria-pressed', String(item.done));
       title.onclick = () => request('toggle', {item_id: item.id, completed: !item.done});
