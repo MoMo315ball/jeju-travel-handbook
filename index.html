@@ -1,0 +1,7 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>济州岛旅行手册</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4eddf;color:#28473a;font:16px/1.65 system-ui,sans-serif}main{max-width:680px;margin:auto;padding:22px 15px}h1{font-size:30px;margin:0 0 15px}h2{color:#934820;font-size:20px}section,article,form{background:#fffaf0;border:1px solid #e5d7bd;border-radius:12px;padding:14px;margin:10px 0}nav{display:flex;flex-wrap:wrap;gap:6px}button,nav a{background:#28523f;color:white;border:0;border-radius:7px;padding:7px 10px;text-decoration:none;font:inherit;cursor:pointer}input,select{font:inherit;max-width:100%;margin:5px}article button{margin:3px}small{display:block}#status{color:#934820}
+</style><main><h1>济州岛旅行手册</h1><p id="status" role="status"></p>
+<form id="login"><label>你的名字 <select name="member_name"><option>球球<option>妹妹<option>子辰<option>若涵</select></label><br><label>邀请码 <input name="invite_code" required type="password" autocomplete="current-password"></label> <button>打开手册</button></form>
+<div id="handbook" hidden><p><span id="visitor"></span> <button id="logout">退出</button></p><div id="pages"></div></div>
+</main><script src="config.js"></script><script src="app.js"></script></html>
