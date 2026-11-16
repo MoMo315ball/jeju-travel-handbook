@@ -21,29 +21,41 @@ function render(data) {
   document.querySelector('#visitor').textContent = data.name;
   pages.innerHTML = data.html;
   pages.querySelectorAll('#shopping > h2').forEach(heading => heading.remove());
+  pages.querySelector('nav a[href="#shopping"]').textContent = '购物清单';
   const packing = pages.querySelector('#before h2:nth-of-type(2)');
-  if (packing) {
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = '出门前核对行李';
-    details.append(summary);
-    while (packing.nextSibling) details.append(packing.nextSibling);
-    packing.replaceWith(details);
-  }
-  for (const [key, personal] of [['shared', false], ['personal', true]]) {
+  while (packing.nextSibling) packing.nextSibling.remove();
+  packing.textContent = '个人待办';
+  const privateTasks = document.createElement('div');
+  privateTasks.id = 'private-tasks';
+  packing.after(privateTasks);
+  // Personal todos reuse the existing account-scoped item endpoint.
+  const prefix = '[个人待办] ';
+  for (const key of ['shared', 'private-tasks', 'personal']) {
+    const personal = key !== 'shared';
+    const isTodo = key === 'private-tasks';
+    const isShopping = key === 'personal';
     const list = document.getElementById(key);
     const form = document.createElement('form');
     form.innerHTML = '<input required maxlength="120" aria-label="新项目" placeholder="添加一项"> <button>添加</button>';
+    const input = form.querySelector('input');
+    const hint = isTodo ? '添加个人待办，仅自己可见' :
+      isShopping ? '添加一项' : '添加共享待办，所有人可见';
+    input.placeholder = hint;
+    input.setAttribute('aria-label', hint);
+    if (isTodo) input.maxLength -= prefix.length;
     form.onsubmit = event => {
       event.preventDefault();
-      request('add', {personal, item_title: form.querySelector('input').value});
+      const value = input.value.trim();
+      if (value) request('add', {personal, item_title: (isTodo ? prefix : '') + value});
     };
-    if (!personal) list.append(form);
-    for (const item of data.items.filter(item => Boolean(item.owner) === personal)) {
+    if (!isShopping) list.append(form);
+    for (const item of data.items.filter(item => Boolean(item.owner) === personal &&
+      (!personal || item.title.startsWith(prefix) === isTodo))) {
+      const itemTitle = isTodo ? item.title.slice(prefix.length) : item.title;
       const row = document.createElement('article');
       const title = document.createElement('button');
       title.className = 'toggle';
-      title.textContent = (item.done ? '✓  ' : '□  ') + item.title;
+      title.textContent = (item.done ? '✓  ' : '□  ') + itemTitle;
       const author = document.createElement('small');
       author.textContent = item.author + (item.deleted_at ? ' · 已删除' : '');
       row.append(title, author);
@@ -61,13 +73,13 @@ function render(data) {
         const edit = document.createElement('button');
         edit.textContent = '修改';
         edit.onclick = () => {
-          const value = prompt('修改项目', item.title);
-          if (value?.trim()) request('edit', {item_id: item.id, item_title: value});
+          const value = prompt('修改项目', itemTitle);
+          if (value?.trim()) request('edit', {item_id: item.id, item_title: (isTodo ? prefix : '') + value.trim()});
         };
         author.append(edit);
         button('删除', 'delete');
       }
-      if (personal && !item.deleted_at) {
+      if (isShopping && !item.deleted_at) {
         const groups = ['自己用', '给妈妈', '送朋友', '伴手礼', '其他'];
         const groupIndex = /防晒|视黄醇|壬二酸/.test(item.title) ? 0 :
           /水乳|精华|面膜/.test(item.title) ? 1 :
@@ -85,7 +97,7 @@ function render(data) {
         group.append(row);
       } else list.append(row);
     }
-    if (personal) {
+    if (isShopping) {
       const details = document.createElement('details');
       const summary = document.createElement('summary');
       summary.textContent = '＋ 添加购物项目';
