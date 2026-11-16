@@ -19,6 +19,7 @@ function render(data) {
   handbook.hidden = false;
   document.querySelector('#visitor').textContent = data.name;
   pages.innerHTML = data.html;
+  pages.querySelectorAll('#shopping > h2').forEach(heading => heading.remove());
   const packing = pages.querySelector('#before h2:nth-of-type(2)');
   if (packing) {
     const details = document.createElement('details');
