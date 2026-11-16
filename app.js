@@ -3,7 +3,8 @@ const handbook = document.querySelector('#handbook');
 const pages = document.querySelector('#pages');
 const status = document.querySelector('#status');
 const storageKey = 'jeju-handbook-session';
-let token = localStorage.getItem(storageKey);
+let token = null;
+try { token = localStorage.getItem(storageKey); } catch {}
 let pending = false;
 function showPage() {
   const sections = [...pages.querySelectorAll('section')];
@@ -95,7 +96,7 @@ function render(data) {
   showPage();
 }
 function clearSession() {
-  localStorage.removeItem(storageKey);
+  try { localStorage.removeItem(storageKey); } catch {}
   token = null;
   handbook.hidden = true;
   pages.replaceChildren();
@@ -116,13 +117,15 @@ async function request(action, args = {}) {
     if (!response.ok) throw Error(response.status === 404 ? '旅行手册后端尚未配置' : data.message || '操作失败');
     if (action === 'login') {
       token = data.token;
-      localStorage.setItem(storageKey, token);
+      try { localStorage.setItem(storageKey, token); } catch {}
       login.reset();
     } else if (action === 'logout') clearSession();
     else render(data);
     status.textContent = '';
   } catch (error) {
-    status.textContent = error.message;
+    status.textContent = error instanceof TypeError
+      ? '连接登录服务失败。请切换 Wi-Fi 或移动网络后重试，也可以用右上角菜单在浏览器打开。'
+      : error.message;
   } finally {
     pending = false;
   }
@@ -130,7 +133,8 @@ async function request(action, args = {}) {
 }
 login.onsubmit = event => {
   event.preventDefault();
-  request('login', Object.fromEntries(new FormData(login)));
+  const {member_name, invite_code} = Object.fromEntries(new FormData(login));
+  request('login', {member_name, invite_code: invite_code.trim()});
 };
 document.querySelector('#logout').onclick = () => request('logout');
 addEventListener('hashchange', showPage);
