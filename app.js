@@ -49,7 +49,7 @@ function render(data) {
       if (value) request('add', {personal, item_title: (isTodo ? prefix : '') + value});
     };
     if (!isShopping) list.append(form);
-    for (const item of data.items.filter(item => Boolean(item.owner) === personal &&
+    for (const item of data.items.filter(item => !item.deleted_at && Boolean(item.owner) === personal &&
       (!personal || item.title.startsWith(prefix) === isTodo))) {
       const itemTitle = isTodo ? item.title.slice(prefix.length) : item.title;
       const row = document.createElement('article');
@@ -57,9 +57,8 @@ function render(data) {
       title.className = 'toggle';
       title.textContent = (item.done ? '✓  ' : '□  ') + itemTitle;
       const author = document.createElement('small');
-      author.textContent = item.author + (item.deleted_at ? ' · 已删除' : '');
+      author.textContent = item.author;
       row.append(title, author);
-      title.disabled = Boolean(item.deleted_at);
       title.setAttribute('aria-pressed', String(item.done));
       title.onclick = () => request('toggle', {item_id: item.id, completed: !item.done});
       function button(label, action, values = {}) {
@@ -68,18 +67,15 @@ function render(data) {
         control.onclick = () => request(action, {item_id: item.id, ...values});
         author.append(control);
       }
-      if (item.deleted_at) button('撤销', 'undo');
-      else {
-        const edit = document.createElement('button');
-        edit.textContent = '修改';
-        edit.onclick = () => {
-          const value = prompt('修改项目', itemTitle);
-          if (value?.trim()) request('edit', {item_id: item.id, item_title: (isTodo ? prefix : '') + value.trim()});
-        };
-        author.append(edit);
-        button('删除', 'delete');
-      }
-      if (isShopping && !item.deleted_at) {
+      const edit = document.createElement('button');
+      edit.textContent = '修改';
+      edit.onclick = () => {
+        const value = prompt('修改项目', itemTitle);
+        if (value?.trim()) request('edit', {item_id: item.id, item_title: (isTodo ? prefix : '') + value.trim()});
+      };
+      author.append(edit);
+      button('删除', 'delete');
+      if (isShopping) {
         const groups = ['自己用', '给妈妈', '送朋友', '伴手礼', '其他'];
         const groupIndex = /防晒|视黄醇|壬二酸/.test(item.title) ? 0 :
           /水乳|精华|面膜/.test(item.title) ? 1 :
