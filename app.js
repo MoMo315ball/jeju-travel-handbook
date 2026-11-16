@@ -9,12 +9,25 @@ function showPage() {
   const sections = [...pages.querySelectorAll('section')];
   const selected = sections.find(x => '#' + x.id === location.hash) || sections[0];
   sections.forEach(x => x.hidden = x !== selected);
+  pages.querySelectorAll('nav a').forEach(link => {
+    if (link.hash === '#' + selected?.id) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
 }
 function render(data) {
   login.hidden = true;
   handbook.hidden = false;
   document.querySelector('#visitor').textContent = data.name;
   pages.innerHTML = data.html;
+  const packing = pages.querySelector('#before h2:nth-of-type(2)');
+  if (packing) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = '出门前核对行李';
+    details.append(summary);
+    while (packing.nextSibling) details.append(packing.nextSibling);
+    packing.replaceWith(details);
+  }
   for (const [key, personal] of [['shared', false], ['personal', true]]) {
     const list = document.getElementById(key);
     const form = document.createElement('form');
@@ -23,33 +36,59 @@ function render(data) {
       event.preventDefault();
       request('add', {personal, item_title: form.querySelector('input').value});
     };
-    list.append(form);
+    if (!personal) list.append(form);
     for (const item of data.items.filter(item => Boolean(item.owner) === personal)) {
       const row = document.createElement('article');
-      const title = document.createElement('strong');
-      title.textContent = (item.done ? '✓ ' : '') + item.title;
+      const title = document.createElement('button');
+      title.className = 'toggle';
+      title.textContent = (item.done ? '✓  ' : '□  ') + item.title;
       const author = document.createElement('small');
       author.textContent = item.author + (item.deleted_at ? ' · 已删除' : '');
       row.append(title, author);
+      title.disabled = Boolean(item.deleted_at);
+      title.setAttribute('aria-pressed', String(item.done));
+      title.onclick = () => request('toggle', {item_id: item.id, completed: !item.done});
       function button(label, action, values = {}) {
         const control = document.createElement('button');
         control.textContent = label;
         control.onclick = () => request(action, {item_id: item.id, ...values});
-        row.append(control);
+        author.append(control);
       }
       if (item.deleted_at) button('撤销', 'undo');
       else {
-        button(item.done ? '取消完成' : '完成', 'toggle', {completed: !item.done});
         const edit = document.createElement('button');
         edit.textContent = '修改';
         edit.onclick = () => {
           const value = prompt('修改项目', item.title);
           if (value?.trim()) request('edit', {item_id: item.id, item_title: value});
         };
-        row.append(edit);
+        author.append(edit);
         button('删除', 'delete');
       }
-      list.append(row);
+      if (personal && !item.deleted_at) {
+        const groups = ['自己用', '给妈妈', '送朋友', '伴手礼', '其他'];
+        const groupIndex = /防晒|视黄醇|壬二酸/.test(item.title) ? 0 :
+          /水乳|精华|面膜/.test(item.title) ? 1 :
+          /礼盒|耳饰|明信片/.test(item.title) ? 2 :
+          /巧克力|花生|米花糖/.test(item.title) ? 3 : 4;
+        let group = list.querySelector('[data-group="' + groupIndex + '"]');
+        if (!group) {
+          group = document.createElement('div');
+          group.dataset.group = groupIndex;
+          const heading = document.createElement('h2');
+          heading.textContent = groups[groupIndex];
+          group.append(heading);
+          list.append(group);
+        }
+        group.append(row);
+      } else list.append(row);
+    }
+    if (personal) {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.textContent = '＋ 添加购物项目';
+      details.append(summary, form);
+      list.append(details);
     }
   }
   showPage();
